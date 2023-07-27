@@ -56,6 +56,6 @@ def automate_lachesis(
 
 
 print("\nautomating graphs without cheaters...\n\n")
-automate_lachesis("../inputs/graphs", "../inputs/results", True, False)
+automate_lachesis("../tests/graphs", "../tests/results", True, False)
 print("\n\nautomating graphs with cheaters...\n\n")
-automate_lachesis("../inputs/cheaters", "../inputs/cheaters_results", True, False)
+automate_lachesis("../tests/cheaters", "../tests/cheaters_results", True, False)

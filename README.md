@@ -1,6 +1,8 @@
 # Lachesis
 
-An implementation of Fantom Foundation's Lachesis consensus protocol in Python in order to simulate/mechanize runs of the protocol and examine its properties of Liveness, Safety, etc.
+This project provides an implementation of Fantom Foundation's Lachesis consensus protocol in Python in order to simulate/mechanize runs of the protocol and to investigate its properties of Liveness, Safety, etc.
+
+There are two main folders: `/PyLachesis` and `/tests`
 
 ## PyLachesis:
 
