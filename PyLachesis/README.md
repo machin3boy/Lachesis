@@ -1,5 +1,7 @@
 # PyLachesis
 
+## Directory Structure
+
 This folder holds two key Python scripts:
 
 - `lachesis.py`: This script contains the Python implementation of Fantom's Lachesis consensus protocol.
@@ -7,15 +9,15 @@ This folder holds two key Python scripts:
 
 In the upcoming sections, each method and critical property of `lachesis.py` will be discussed in detail.
 
-Before diving into the description of each class in `lachesis.py` and their corresponding methods, it's worth mentioning that the implementation of the Lachesis protocol is a complex task, encapsulating various classes and methods for different functionalities. This includes event processing, peer interactions, consensus mechanisms, and more. The script is designed to be as faithful as possible to the Fantom Lachesis protocol, ensuring that all core aspects of the protocol are properly represented.
+Before diving into the description of each class in `lachesis.py` and their corresponding methods, it's worth mentioning that the implementation of the Lachesis protocol is a complex task, encapsulating various classes and methods for different functionalities. This includes event processing, peer interactions, consensus mechanisms, and more. The script is designed to be as faithful as possible to the Fantom Lachesis protocol, ensuring that all core aspects of the consensus protocol are properly represented.
 
-In `automate_lachesis.py`, test automation allows us to examine the Lachesis consensus protocol behavior under various conditions, using both provided and custom test scenarios. It's an indispensable tool for validating the functionality of `lachesis.py`, facilitating extensive and automated test execution.
+Please note that this implementation is not just an abstract high-level representation of the Lachesis consensus protocol. It's also been crafted to allow easy understanding, modification, and extension. As such, the structure and organization of the code in `lachesis.py`, as well as the testing procedure in `automate_lachesis.py`, has been carefully curated to promote readability and maintainability. If you have any suggestions for improvements or corrections, please don't hesitate to reach out.
 
-Please note that this implementation is not just an abstract representation of the Lachesis consensus protocol. It's also been crafted to allow easy understanding, modification, and extension. As such, the structure and organization of the code in `lachesis.py`, as well as the testing procedure in `automate_lachesis.py`, has been carefully curated to promote readability and maintainability. If you have any suggestions for improvements or corrections, please don't hesitate to reach out.
+In `automate_lachesis.py`, test automation allows us to examine the Lachesis consensus protocol behavior under various conditions, using both provided and custom test scenarios. It's a tool for validating the functionality of `lachesis.py`, facilitating extensive and automated test execution. It is covered in more detail in the section `automate_lachesis.py`.
 
 Next, we will break down each class within `lachesis.py`, explaining the purpose of the class and each of its methods. This is designed to help you navigate the implementation and understand the roles and responsibilities of the different parts of the code.
 
-## `lachesis.py` in detail (to be completed)
+## `lachesis.py` in Detail (to be completed)
 
 #### globals
 
@@ -60,7 +62,7 @@ Next, we will break down each class within `lachesis.py`, explaining the purpose
 - graph_results
 - run_lachesis
 
-## automate_lachesis.py
+## `automate_lachesis.py`
 
 The `automate_lachesis.py`script aids in automating tests by utilizing the `automate_lachesis()` function. The function signature is as follows:
 
@@ -77,7 +79,7 @@ Here is the description of each parameter:
 - `create_graph` is a boolean that, if set to `True`, generates a pictorial representation of the Lachesis consensus results on the test DAG from a global perspective.
 - `create_graph_multi` is a boolean that, if set to `True`, generates a pictorial representation of the Lachesis consensus results on the test DAG from the perspective of each validator in the test DAG. This option is useful for analyzing scenarios where one validator's Lachesis properties, such as frame, sequence, Atropos roots, etc., differ from another.
 
-By default, the `automate_lachesis()` function is applied to the `/graphs` and `/cheaters` directories, with results saved in `/results` and `/cheaters_results` respectively. The function also generates a global perspective of the Lachesis results.
+By default, the `automate_lachesis()` function is applied to the `/graphs` and `/cheaters` directories, with results saved in `/results` and `/cheaters_results` respectively. The function generates and saves the results of the consensus algorithm being applied on the DAG from a global perspective.
 
 During automated testing, a progress bar indicates the remaining graphs and the percentage of graphs already processed. The script validates all Lachesis executions to ensure consistent views of the DAG and Lachesis properties among all validators. Therefore, if a discrepancy arises between the baseline view and a validator's view during the tests, the script identifies the failed assertion and the corresponding test case. Once all tests in a given directory are complete, the script prints the success rate.
 

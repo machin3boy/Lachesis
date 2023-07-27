@@ -1,3 +1,4 @@
+# Tests
 ## Directory Structure
 
 This folder contains various test cases, depicted as Directed Acyclic Graphs (DAGs), for the Fantom Lachesis consensus protocol. Each DAG comprises nodes known as Events, with each row corresponding to Events emitted by a single validator.
@@ -9,7 +10,7 @@ The directory is organized into several subfolders:
 -  `/results` and `/cheaters_results`: These subfolders store the results of the first 100 DAGs in the `/graphs` and `/cheaters` folders respectively, represented as PDFs.
 
 Apart from these subfolders, this directory also includes two scripts: `graph.py` and `automate_graphing.py`, which help automate the generation of custom test cases.
-## Generating tests
+## Generating Tests
 
 To generate test cases, run the script using the command `python3 graph.py`. The script offers several options for customization. If you hit 'Enter' without providing an input, the script will use the default values. However, you can also input "y"/"n" for binary choices, integers for number values, and a float between 0 and 1.0 for probabilities.
 
@@ -24,7 +25,7 @@ To generate test cases, run the script using the command `python3 graph.py`. The
 - Base directory for output files (Default: Current directory)
 Starting index for file numbering (Default: 1)
 
-## Script outputs:
+## Script Outputs:
 
 Upon execution, the script creates:
 
@@ -32,7 +33,7 @@ Upon execution, the script creates:
 - `graph_{i}.txt`: A textual representation of the DAG for programmatic access, saved in the specified base directory.
 - `neighbors_{i}.txt`: A textual representation of the adjacency matrix/neighbors dictionary of the corresponding DAG's validators, saved in the specified base directory.
 
-## Automating graph generation:
+## Automating Graph Generation:
 
 The `automate_graphing.py` script allows for automated graph generation by setting custom parameters for the `graph.py` script in the `parameters_list` array of the `automate_graphing.py` file. Each tuple in the array corresponds to the parameters listed above. After adjusting the `parameters_list`, simply run `automate_graphing.py` to generate all DAGs with your configurations.
 
