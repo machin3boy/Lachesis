@@ -1,16 +1,20 @@
-# Lachesis
+# Lachesis - A Python Implementation
 
-This project provides an implementation of Fantom Foundation's Lachesis consensus protocol in Python in order to simulate/mechanize runs of the protocol and to investigate its properties of Liveness, Safety, etc.
+Welcome to Lachesis, a project dedicated to the Python implementation of the Lachesis consensus protocol developed by the Fantom Foundation. The primary objective is to simulate and analyze the protocol's execution to better understand its key attributes such as Liveness, Safety, and more.
 
-There are two main folders: `/PyLachesis` and `/tests`
+This project comprises two main directories: `/PyLachesis` and `/tests`. While brief descriptions are provided here, each directory contains more detailed documentation.
 
 ## PyLachesis:
 
-- this is an implementation of the Lachesis consensus protocol in Python
-- the relevant class and lachesis consensus methods are implemented in `/PyLachesis/lachesis.py`
+The `/PyLachesis` folder is the heart of this project and houses two main files: `lachesis.py` and `automate_lachesis.py`.
 
-## Inputs & Test Case Generation:
+-  `lachesis.py`: This is where the Lachesis consensus protocol is implemented. It contains all the necessary functions required for the protocol's operation.
+-  `automate_lachesis.py`: This file is focused on automation. It contains the code needed to automate the execution and verification of Lachesis, utilizing the test cases found in the `/tests` directory.
 
-- the Python script to generate test cases as pdfs and as text inputs for the Python implementation are in `/inputs`
-- some sample DAGs are available in the directory
-- the script allows to generate custom DAGs
+## Tests:
+
+The `/tests` directory is where you will find Python scripts for generating Directed Acyclic Graphs (DAGs) that serve as test cases for the consensus algorithm.
+
+-  DAG Creation: Test DAGs are represented visually as PDFs, accompanied by two .txt files. One file represents the sequence of events in the DAG, while the other illustrates the adjacency matrix or the 'neighbors' dictionary, indicating the validators that are interconnected and can observe each other's events.
+-  Sample DAGs: The directory contains several sample DAGs and results for reference.
+-  Custom DAG Generation: A script is available for creating custom DAGs. More detailed information on tweaking parameters and settings is provided in the directory.
