@@ -104,6 +104,6 @@ In order not to skew the weights in the graph in favor of one validator or of a 
 - The vertical axis represents the weight
 - The blue line represents the logistic function
 - The green line represents the average weight of the validators
-- The red dots represent the random weight each of the x validators were assigned if there were x validators in the graph
+- The red dots represent the random weight each of the x validators were assigned if there were x validators in the graph in this example
 
-The advantage of using a logistic function f(x) is that if there is a high number of validators, the maximum weight a validator can have is dictated as a parameter of the logistic function so that as the number of validators grows the maximum weight any given validator can have does not. The other advantage is that if there is a small number of validators, each validator's weight is closer to 1 to prevent skewing until in favor of other validators. 
+ Each validator's weight is a random integer in [1, ⌊f(x)⌋+1] where x is the number of validators in the DAG, and f(x) is a logistic function. The advantage of using this approach is that if there is a small number of validators, each validator's weight is closer to 1 to prevent skewing in favor of other validators, so as to prevent a scenario where 9 validators have a weight of 1 while 1 validator has a weight of 10, for example. The other advantage of using a logistic function f(x) is that if there is a high number of validators, the maximum weight a validator can have can be set as a parameter of the logistic function so that as the number of validators grows the maximum weight any given validator can have does not. 
