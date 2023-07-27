@@ -2,12 +2,12 @@
 
 This folder contains a number of test cases for the fantom Lachesis consensus protocol code. Graphs without forks/cheaters are placed into the `/graphs` folder, whereby each graph is represented pictorially with a PDF and in text format for programs as a .txt file. The adjacency matrix of each DAG's validators are also placed as .txt files into the folder. In the top left section of the PDF, some properties with which the graph was generated are noted. Similar to `/graphs`, the `/cheaters` folder contains a number of graphs as PDFs and as .txt files with the difference being that each validator has a non-zero probability of being a cheater, that is, a validator that can create forks in the graph. <br>
 
-The `/results` and `/cheaters_results` folders contain the results of the corresponding DAGs in `/graphs` and `/cheaters` as PDFs. <br>
+The `/results` and `/cheaters_results` folders contain the results of the first 100 corresponding DAGs in `/graphs` and `/cheaters` as PDFs. <br>
 
 This folder also contains a `graph.py` and an `automate_graphing.py` script to automate generating custom test cases.
 
 
-## Generating inputs
+## Generating tests
 
 Run `python3 graph.py`
 
@@ -104,6 +104,16 @@ In order not to skew the weights in the graph in favor of one validator or of a 
 - The vertical axis represents the weight
 - The blue line represents the logistic function
 - The green line represents the average weight of the validators
-- The red dots represent the random weight each of the x validators were assigned if there were x validators in the graph in this example
+- The red dots represent the random weight each of the `x` validators were assigned if there were `x` validators in the graph in this example
 
- Each validator's weight is a random integer in [1, ⌊f(x)⌋+1] where x is the number of validators in the DAG, and f(x) is a logistic function. The advantage of using this approach is that if there is a small number of validators, each validator's weight is closer to 1 to prevent skewing in favor of other validators, so as to prevent a scenario where 9 validators have a weight of 1 while 1 validator has a weight of 10, for example. The other advantage of using a logistic function f(x) is that if there is a high number of validators, the maximum weight a validator can have can be set as a parameter of the logistic function so that as the number of validators grows the maximum weight any given validator can have does not. 
+ Each validator's weight is a random integer in `[1, ⌊f(x)⌋+1]` where `x` is the number of validators in the DAG, and `f(x)` is a logistic function. The advantage of using this approach is that if there is a small number of validators, each validator's weight is closer to 1 to prevent skewing in favor of other validators, so as to prevent a scenario where 9 validators have a weight of 1 while 1 validator has a weight of 10, for example. The other advantage of using a logistic function `f(x)` is that if there is a high number of validators, the maximum weight a validator can have can be set as a parameter of the logistic function so that as the number of validators grows the maximum weight any given validator can have does not. 
+
+ The parameters `L`, `k`, `x0`, `x` of the logistic function can be adjusted in the `random_weight(x)` function of `graph.py`:
+
+```python
+def logistic(L, k, x0, x):
+    return L / (1 + math.exp(-k * (x - x0)))
+
+def random_weight(x):
+    return int(logistic(40, 0.2, 25, x) * random.random()) + 1
+```
