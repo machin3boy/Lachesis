@@ -400,7 +400,6 @@ class Lachesis:
         self.deactivation_time = {}
         self.deactivated_validators = set()
         self.deactivated_cheaters = set()
-        self.cheaters_observed = {}
         self.quorum_cache = {}
         self.uuid_event_dict = {}
         self.suspected_cheaters = set()
