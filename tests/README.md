@@ -5,8 +5,8 @@ This folder contains various test cases, depicted as Directed Acyclic Graphs (DA
 
 The directory is organized into several subfolders:
 
--  `/graphs`: This subfolder contains DAGs representing scenarios without forks or cheaters. Each graph is visually represented as a PDF and also detailed in a `.txt` file for programmatic access. The adjacency matrix for each DAG's validators is also provided as a `.txt` file. The PDFs include annotations in the top left section detailing the properties used to generate the graph.
--  `/cheaters`: Similar to the `/graphs` subfolder, this contains DAGs represented as PDFs and `.txt` files. However, in these scenarios, each validator has a non-zero probability of being a cheater (a validator that can create forks in the graph).
+-  `/graphs`: This subfolder contains DAGs representing scenarios without forks or cheaters. Each graph is visually represented as a PDF and also detailed in a `.txt` file for programmatic access. The adjacency matrix for each DAG's validators is also provided as a `.txt` file. The PDFs include annotations in the top left section detailing the properties used to generate the graph. Please note the first 40 tests in this folder have been generated to be simple DAGs for testing.
+-  `/cheaters`: Similar to the `/graphs` subfolder, this contains DAGs represented as PDFs and `.txt` files. However, in these scenarios, each validator has a non-zero probability of being a cheater (a validator that can create forks in the graph). Please note the first 40 tests in this folder have been generated to be simple DAGs for testing.
 -  `/results` and `/cheaters_results`: These subfolders store the results of the first 100 DAGs in the `/graphs` and `/cheaters` folders respectively, represented as PDFs.
 
 Apart from these subfolders, this directory also includes two scripts: `graph.py` and `automate_graphing.py`, which help automate the generation of custom test cases.
@@ -23,7 +23,7 @@ To generate test cases, run the script using the command `python3 graph.py`. The
 - Probability that an Event node observes another validator's Event node (Default: 0.3). You can also input 'r' or 'random' for a random value each iteration.
 - Probability that any two given validators are neighbors (Default: 0.5). You can also input 'r' or 'random' for a random value each iteration.
 - Base directory for output files (Default: Current directory)
-Starting index for file numbering (Default: 1)
+- Starting index for file numbering (Default: 1)
 
 ## Script Outputs:
 
@@ -99,7 +99,7 @@ To avoid skewing the graph weights in favor of one validator or a small group of
 
 Each validator's weight is a random integer in `[1, ⌊f(x)⌋+1]`, where `x` is the number of validators in the DAG, and `f(x)` is a logistic function. Using this approach ensures that if there is a small number of validators, each validator's weight is closer to 1, thereby preventing skewing in favor of some validators. For instance, this prevents a situation where nine validators have a weight of 1 while one validator has a weight of 10. Another advantage of using a logistic function `f(x)` is that if there is a high number of validators, the maximum weight a validator can have can be set as a parameter of the logistic function so that as the number of validators grows, the maximum weight any given validator can have does not.
 
-The parameters `L, k, x0, x` of the logistic function can be adjusted in the `random_weight(x)` function of `graph.py`:
+The parameters `L, k, x0, x` of the logistic function can be adjusted in the `random_weight(x)` function of `graph.py` to suit your needs:
 
 ```python
 def logistic(L, k, x0, x):
