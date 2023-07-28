@@ -550,11 +550,6 @@ class Lachesis:
             else 1
         )
 
-        if event.validator not in self.validator_highest_frame:
-            self.validator_highest_frame[event.validator] = event.frame
-        elif event.frame > self.validator_highest_frame[event.validator]:
-            self.validator_highest_frame[event.validator] = event.frame
-
         frame_roots = self.root_set_events.get(event.frame, [])
         if not frame_roots:
             return False
