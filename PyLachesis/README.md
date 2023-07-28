@@ -1,4 +1,4 @@
-# PyLachesis
+The process_deferred_events method is in charge of invoking the process_events function of the corresponding Lachesis instance. This function processes all the Events scheduled to be incorporated into the validator's DAG and evaluated for consensus. Once this operation is complete, the method clears the process_queue, ensuring all deferred Events have been duly addressed and the queue is ready for the next set of Events.# PyLachesis
 
 ## Directory Structure
 
@@ -61,12 +61,12 @@ The Event object also has a number of properties:
 - `highest_observed` is a dictionary of validator:sequence key-value pairs which represents which validators this Event observes and what is the highest sequence of said validators.
 - `lowest_observing` is a dictionary with the format
     ```python
-    validator:{
+    validator : {
         "uuid": event.uuid,
         "sequence": event.sequence,
     }
     ```
-    which tracks which validators observe this Event along with their UUIDv4 and logical sequence.
+    which tracks which validators observe this Event at the lowest corresponding logical sequence of the observing validator's Event along with their UUIDv4.
 - `parents` is the list of parent UUIDv4s.
 - `visited` is a dictionary of which validators have been visited and at what sequence in order to track down cheaters.
 - `last_event` is a boolean which represents whether this is the the last Event of the associated validator.
@@ -119,13 +119,11 @@ Furthermore, this class enables the inter-validator communication necessary for 
 
 The associated methods, to be described in detail, each perform a unique function contributing to these responsibilities, from initialization and deferring of events, to quorum calculation, root identification, voting, fork detection, and graphing results, culminating in the execution of the Lachesis protocol.
 
-#### `__init__(validator=None)`
-
-__init__(validator=None)
+#### `__init__(self, validator=None)`
 
 This is the constructor of the Lachesis class object. It initializes various properties essential for consensus tracking.
 
-- `validator=None`: This optional parameter represents the associated validator for this instance of the Lachesis class. The reason it defaults to None is to accommodate two modes of running the Lachesis consensus. The "global" mode allows the Lachesis instance to process and have knowledge of all events directly. Conversely, in the "individual" mode, each validator is aware of only the events it directly observes or requests and receives. This facilitates the construction of its unique view of the DAG and subsequent results. This parameter determines the mode of operation.
+- `validator` is the optional parameter which represents the associated validator for this instance of the Lachesis class. The reason it defaults to None is to accommodate two modes of running the Lachesis consensus. The "global" mode allows the Lachesis instance to process and have knowledge of all events directly. Conversely, in the "individual" mode, each validator is aware of only the events it directly observes or requests and receives. This facilitates the construction of its unique view of the DAG and subsequent results. This parameter determines the mode of operation.
 
 The constructor method also initializes a number of important properties:
 
@@ -159,12 +157,11 @@ The constructor method also initializes a number of important properties:
 
 # vote structure
 vote = {
-    "decided": True/False,      # has a quorum of validators also voted for this candidate
-    "yes": True/False           # is the decision to elect this candidate as an Atropos or not
+    "decided": True/False,      # tracks if a quorum of validators also voted for this candidate
+    "yes": True/False           # tracks the decision to elect this candidate as an Atropos
 }
 
-# tracking election votes 
-# how roots in a given frame being decided voted for candidates
+# tracks how roots in a given frame being decided voted for Atropos candidates
 election_votes[frame_to_decide][(root.uuid, atropos_candidate.uuid)] = vote 
 ```
 
@@ -176,24 +173,105 @@ election_votes[frame_to_decide][(root.uuid, atropos_candidate.uuid)] = vote
 - `process_queue` is dictionary of uuid:Event key-value pairs of Events that the validator is yet to process and add to its DAG and track consensus with
 - `maximum_frame` is a variable which tracks the highest frame of any validator's Events in the DAG visible to the associated validator.
 - `minimum_frame` is a variable which tracks the lowest maximum frame of any validator's Events in the DAG visible to the associated validator.
-- `leaves` tracks the leaves of the DAG - that is, those Events that are not the parents of any other event in the DAG. This is to facilitate returning the subgraph of Events unknown to another validator more efficiently by doing a breadth-first search towards the parents from the leaves to determine which Events to return.
+- `leaves` tracks the leaves of the DAG - that is, those Events that are not the parents of any other event in the DAG. This is to facilitate returning the subgraph of Events unknown to another validator more efficiently by iterating towards the direct parents from the leaves to determine which Events to return.
 
-#### `initialize_validators(self, validators=None, validator_weights=None):
+#### `initialize_validators(self, validators=None, validator_weights=None)`:
 
 This is the method that sets the validators and their corresponding weights when a Lachesis instance is initializing.
 
 - `validators` is the list of validators to initialize that the validators are aware of as they are in the `field_of_view` of the test case DAG
 - `validator_weights` is the variable to track the weights of the corresponding validators
 
-#### `defer_event`
-#### `process_request_queue`
-#### `process_deferred_events`
-#### `quorum`
-#### `is_root`
-#### `set_roots`
+#### `defer_event(self, event, instances, uuid_validator_map)`
+
+The `defer_event` method manages the process of deferring the processing of an Event until its parent Events have been established within the DAG or process queue.
+
+On invocation, the method checks the UUIDv4s of the Event's parent events. If a parent Event's UUIDv4 is found within the instance's `process_queue` or `uuid_event_dict`, it implies that the parent Event has either been requested previously or is already present.
+
+However, if a parent Event is not present, the `defer_event` method initiates a request from the validator associated with the missing parent Event. This check-and-request process is executed for each parent UUID related to the Event.
+
+This method ensures the correct sequence of event processing by safeguarding against scenarios where a parent event, which should logically precede, has not been processed yet.
+
+- `event` is the Event that is currently being deferred and the parents of which are being checked.
+- `instances` is the dictionary of validator:instance key-value pairs of validators' corresponding Lachesis instance objects to request events from.
+- `uuid_validator_map` is the mapping of UUIDv4s to validators to determine which validator corresponds to the parent UUIDv4.
+
+#### `process_request_queue(self, instances)`
+
+The `process_request_queue` method operates by scanning its `request_queue`, which holds tuples in the format (validator, UUIDv4). Its primary function is to deliver the portion of the DAG that is absent in the requesting validator's view.
+
+It returns those Events from its DAG that have a timestamp less than the Event associated with the requested UUIDv4, with one exception. For Events belonging to the validator that generated the UUIDv4 in question, the timestamp could be equal to or less than the timestamp of the requested Event. In summary, this method helps ensure all validators are supplied with the necessary preceding Events, thereby maintaining an accurate representation of the DAG.
+
+The method achieves this by iterating from each of its leaf nodes in the DAG, tracked by the `leaves` property, towards its direct parents, stopping once an Event is encountered that is present in the requesting validator. All Events that match the timestamp requirement and are missing from the requesting validator are added to the requesting validator's `process_queue`. 
+
+- `instances` is the dictionary of validator:instance key-value pairs of validators' corresponding Lachesis instance objects to request events from.
+
+#### `process_deferred_events(self)`
+
+The process_deferred_events method is in charge of invoking the process_events function of the corresponding Lachesis instance. This function processes all the Events scheduled to be incorporated into the validator's DAG and evaluated for consensus. Once this operation is complete, the method clears the process_queue, ensuring all deferred Events have been duly addressed and the queue is ready for the next set of Events.
+
+#### `quorum(self, frame)`
+
+The quorum method calculates the weight of the quorum for a given frame in the DAG. It primarily takes into account the set of active validators and their respective weights, while also considering any changes in validator activity or suspected misbehavior.
+
+The method uses a cache, `quorum_cache`, to store the calculated quorum weights for different frames to avoid unnecessary computations.
+
+Initially, it makes copies of the sets of deactivated cheaters and validators. It then iterates over the `deactivation_queue`, a dictionary that keeps track of validators that are to be deactivated and the frame at which they should be deactivated. Validators that have reached or surpassed their deactivation frame are added to the `deactivated_validators` set.
+
+An `active_validators` list is constructed, which includes validators who are not in either the `deactivated_cheaters` or `deactivated_validators` sets.
+
+Next, the method handles suspected cheaters. It iterates over the `suspected_cheaters` set, checking if a suspected cheater is not already deactivated. If not, it checks whether this suspected cheater has been observed by the majority of the active validators before `frame - 1` - this is akin to a buffer zone to ensure all validators have had the chance to observe the cheater in question. If this cheater has been observed by the majority of active validators, it is added to the `deactivated_cheaters` set.
+
+The method then processes the `activation_queue`, a dictionary with validators that are to be activated and their respective weights. If a validator's activation frame is equal to or earlier than the current frame and they're not already an active validator, they are added to the validators list and their weight is set.
+
+Finally, the method calculates the total weight of active validators that are not deactivated, either as cheaters or validators, and that are not still to be activated. This total weight is then used to calculate the weight of the quorum for the current frame, which is defined as `2 * weights_total // 3 + 1`.
+
+The quorum weight for the current frame is cached and returned. This represents the minimum amount of validator weight needed to reach a consensus for the frame in question.
+
+- `frame` is the frame for which the quorum is calculated and stored in the cache, or returned if it is already available in the cache.
+
+#### `is_root(self, event)`
+
+The `is_root` method is responsible for determining if a given Event in the DAG can be considered as a root. By definition, an Event is considered a root if it has been [forkless-caused](https://github.com/machin3boy/Lachesis/tree/main/PyLachesis#forkless_cause) by the prior frame's quorum of roots, or if it is the first Event of the validator in question.
+
+- `event`: the Event being examined in order to determine if it can be classified as a root.
+
+Here are the steps the method takes to determine if an Event is a root:
+
+- If the sequence number of the `Event` is 1, the Event is deemed a root immediately. This is because the first Event in a sequence is always considered a root.
+- The Event's frame number is fetched from the `validator_highest_frame` dictionary (which maintains the highest frame each validator has reached), or set to `1` if this is the validator's first event.
+- The method fetches the root Events for the Event's frame from the `root_set_events` dictionary. If there are no root Events for this frame, the function returns `False`, indicating the Event is not a root.
+- The method calculates the total weight of the root Events that 'forkless-cause' this Event. 
+- Finally, the method checks whether the total weight of the roots it is 'forkless-caused' by is equal to or surpasses the quorum for the frame. If it does, the method returns `True`, meaning the Event is a root. If not, the function returns `False`.
+
+This method plays an essential role in the operation of Lachesis by helping to identify root Events, which aids in structuring the DAG into a set of consecutive frames.
+
+#### `set_roots(self, event)`
+
+The `set_roots` method is utilized to determine whether a given Event qualifies as a root and accordingly update the frame structures in the DAG. If an Event is indeed a root, the method designates it as such and properly sets its frame in addition to updating the `root_set_events`, `root_set_validators`, and `validator_highest_frame` records.
+
+- `event`: the Event which is being analyzed to ascertain whether it should be designated as a root.
+
+The method proceeds as follows:
+
+- It uses the `is_root` method to check if the Event is a root. If it isn't, the function updates the `validator_highest_frame` dictionary and ends its execution.
+- If the Event is a root, the method marks it as such (`event.root = True`). If the Event is the first in its sequence, its frame is set to 1, or to the activation frame of the validator if it is present in the `activation_queue`. For all other roots, the frame number is incremented by 1 from its current frame.
+- The method then checks if the current frame of the `Lachesis` object is less than the Event's frame. If so, it updates the current frame to the Event's frame.
+- Following this, the method updates `root_set_events` and `root_set_validators` dictionaries, adding the Event to the list of root events for its frame, and the validator to the list of root validators for the frame.
+- If the frame of the Event does not already exist in `root_set_events`, the method also calls `quorum` to calculate the quorum for this new frame.
+- Finally, the method updates the `validator_highest_frame` dictionary to record the highest frame number the validator has reached.
+
+This method plays a pivotal role in maintaining the frame structure of the DAG and assists in identifying the roots, which are the backbone for creating a topological ordering of the Events.
+
 #### `atropos_voting`
 #### `process_known_roots`
 #### `forkless_cause`
+
+Event `A` is forkless caused by Event `B` if in the subgraph of `A` (the subgraph of `A` being all Events reachable by `A`):
+
+- `A` does not observe any forks from `B`'s validator
+- The quorum of validators (⌈⅔W⌉ +1) has observed B (after excluding branches with a fork)
+
 #### `detect_forks`
 #### `set_highest_events_observed`
 #### `set_lowest_observing_events`
@@ -203,15 +281,10 @@ This is the method that sets the validators and their corresponding weights when
 
 ## `automate_lachesis.py`
 
-The `automate_lachesis.py`script aids in automating tests by utilizing the `automate_lachesis()` function. The function signature is as follows:
+The `automate_lachesis.py`script aids in automating tests by utilizing the `automate_lachesis()` function.
 
-```python
-def automate_lachesis(
-    input_dir, output_dir, create_graph=False, create_graph_multi=False
-)
-```
+#### automate_lachesis(input_dir, output_dir, create_graph=False, create_graph_multi=False)
 
-Here is the description of each parameter:
 
 - `input_dir` is the directory that contains the test files on which the Lachesis consensus algorithm will be run.
 - `output_dir` is the directory where the test run results for each test will be saved.

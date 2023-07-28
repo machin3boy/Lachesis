@@ -1063,11 +1063,11 @@ class Lachesis:
 if __name__ == "__main__":
     # lachesis_single_instance = Lachesis()
     # lachesis_single_instance.run_lachesis(
-    #     "../inputs/graphs/graph_58.txt",
+    #     "../tests/graphs/graph_58.txt",
     #     "./result.pdf",
     #     False,
     # )
     lachesis_multi_instance = LachesisMultiInstance()
     lachesis_multi_instance.run_lachesis_multiinstance(
-        "../inputs/graphs/graph_58.txt", "./", True
+        "../tests/graphs/graph_58.txt", "./", True
     )
