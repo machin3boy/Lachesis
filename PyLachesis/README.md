@@ -8,9 +8,11 @@ This folder holds two key Python files:
 
 In the upcoming sections, each method and critical property of `lachesis.py` will be discussed in detail.
 
-Before diving into the description of each class in `lachesis.py` and their corresponding methods, it's worth mentioning that the implementation of the Lachesis protocol is a complex task, encapsulating various classes and methods for different functionalities. This includes event processing, peer interactions, consensus mechanisms, and more. The script is designed to be as faithful as possible to the Fantom Lachesis protocol, ensuring that all core aspects of the consensus protocol are properly represented.
+The `lachesis.py` implementation is a high-level representation aiming to accurately model the Fantom Lachesis protocol. It utilizes various classes and methods, each responsible for different functionalities, such as event processing, peer interactions, and consensus mechanisms. The intention behind this project is to simulate the protocol, enabling the examination and formalization of its consensus operations, amongst other research goals. 
 
-Please note that this implementation is not just an abstract high-level representation of the Lachesis consensus protocol. It's also been crafted to allow easy understanding, modification, and extension. As such, the structure and organization of the code in `lachesis.py`, as well as the testing procedure in `automate_lachesis.py`, has been carefully curated to promote readability and maintainability. If you have any suggestions for improvements or corrections, please don't hesitate to reach out.
+Given the complexity of accurately replicating the protocol, there might be occasional discrepancies from the Fantom Lachesis protocol. Any feedback regarding potential functional disparities compared to the Fantom protocol is highly appreciated. 
+
+Moreover, the implementation is designed with readability and extensibility in mind, promoting an easier understanding, modification, and extension of the protocol. Suggestions for improvements or corrections that further enhance these goals are also very welcome.
 
 In `automate_lachesis.py`, test automation allows us to examine the Lachesis consensus protocol behavior under various conditions, using both provided and custom test scenarios. It's a tool for validating the functionality of `lachesis.py`, facilitating extensive and automated test execution. It is covered in more detail in the section `automate_lachesis.py`.
 
@@ -37,7 +39,7 @@ This function is responsible for taking the parsed list of events and only retur
 - `events` is the list of `Event` objects that are passed to be filtered in order to return the validators and validator weights known in the first `field_of_view` time steps.
 ### class Event
 
-The Event class encapsulates a particular data structure in the context of the Lachesis protocol. As per its formal definition, "An Event is a data structure with a set of transactions and a set of parent events' hashes, signed by one validator. Unlike Ethereum-compatible blocks, it can have multiple parents and they form a Directed Acyclic Graph (DAG). Events are emitted by validators and spread over the network to every network node. Each node uses them to construct Ethereum-like blocks using the Lachesis algorithm and executes them in the Ethereum Virtual Machine (EVM) to build the network state locally." This class provides a representation of this definition, albeit without the associated transactions and by representing references to parents in a slightly different way (a list of UUID identifiers for Event objects). 
+The Event class encapsulates the core data structure for the Lachesis protocol. As per its formal definition, "An Event is a data structure with a set of transactions and a set of parent events' hashes, signed by one validator. Unlike Ethereum-compatible blocks, it can have multiple parents and they form a Directed Acyclic Graph (DAG). Events are emitted by validators and spread over the network to every network node. Each node uses them to construct Ethereum-like blocks using the Lachesis algorithm and executes them in the Ethereum Virtual Machine (EVM) to build the network state locally." This class provides a representation of this definition, albeit without the associated transactions and by representing references to parents in a slightly different way (a list of UUID identifiers for Event objects). 
 
 
 #### `__init__(self, validator, timestamp, sequence, weight, unique_id, last_event=False)`
@@ -94,11 +96,11 @@ This returns the hash of the `validator, timestamp, sequence, weight, uuid, last
 
 ### class LachesisMultiInstance
 
-The LachesisMultiInstance class manages the simulation of individual validator interactions and maintains the state of each validator's corresponding Lachesis instances. Each instance represents a unique consensus perspective held by the validator it corresponds to.
+The `LachesisMultiInstance` class manages the simulation of individual validator interactions and maintains the state of each validator's corresponding Lachesis instances. Each instance represents a unique consensus perspective held by the validator it corresponds to.
 
-In every time step within the DAG, when a validator emits an Event, the corresponding Lachesis instance defers processing the Event and instead, requests the missing parent Events from the originating validator. This simulates the necessary communication between validators to ensure all relevant data is known before an Event is processed.
+In every time step within the DAG, when a validator emits an Event, the corresponding Lachesis instance defers processing the Event and instead requests the missing parent Events from the originating validator first. This simulates the necessary communication between validators to ensure all relevant data is known before an Event is processed.
 
-After the initial request for missing Events, the originating validator returns all Events it has in its request queue from other validators' instances. Following this exchange, the Lachesis instance is then able to process its own deferred Events.
+After the initial request for missing Events, the originating validator returns all Events it has in its request queue from other validators' instances. Following this exchange, the Lachesis instance is able to process its own deferred Events.
 
 This cycle of request-receive-process models the real-world communication process between validators within the Lachesis consensus protocol.
 
@@ -143,22 +145,22 @@ This method ensures that events are processed in a chronological order and are p
 
 The `run_lachesis_multiinstance` method functions as a main driver to execute the Lachesis protocol in a multi-instance scenario. This method processes a collection of events for each validator instance, based on data from an input file. Optionally, it can generate individual graph results for each validator instance. The method also verifies the consistency of each instance with a reference instance, ensuring the accuracy of the protocol's execution.
 
-- `input_filename`: This is the name of the input file that contains the event data to be processed. The data in this file is parsed into a list of events, with each event containing details about the validator, timestamp, sequence, etc.
-- `output_folder`: This is the folder where individual graphical representations of the final state of each validator instance will be saved, provided that `graph_results` is set to True.
-- `graph_results`: This is a Boolean parameter that determines whether or not to generate graphical representations of the final state for each validator instance. If set to True, a graph will be generated and saved for each validator instance in the `output_folder`.
+- `input_filename` is the name of the input file that contains the event data to be processed. The data in this file is parsed into a list of events, with each event containing details about the validator, timestamp, sequence, etc.
+- `output_folder`: This is the folder where individual graphical representations of the final state of each validator instance will be saved, provided that `graph_results` is set to `True`.
+- `graph_results` is a boolean parameter that determines whether or not to generate graphical representations of the final state for each validator instance. If set to `True`, a graph will be generated and saved for each validator instance in the `output_folder`.
 
 The steps followed by this function are as follows:
 
 1. **Setup**: The method sets up input file path and the `graph_results` flag. The `process` method of `LachesisMultiInstance` is called to process the events for each validator instance.
 2. **Reference Instance Creation**: A reference instance is created by running the Lachesis protocol using the `run_lachesis` method on the input file. This serves as a reference for verifying the multi-instance run.
-3. **Graph Result Generation**: If `graph_results` is set to True, the method iterates over each validator instance and generates a graph of the final state of the protocol. These graphs are saved as PDF files in the `output_folder`, with individual files for each validator instance.
+3. **Graph Result Generation**: If `graph_results` is set to `True`, the method iterates over each validator instance and generates a graph of the final state of the protocol. These graphs are saved as PDF files in the `output_folder`, with individual files for each validator instance.
 4. **Verification**: The method then verifies the accuracy and consistency of each validator instance in relation to the reference instance. Several aspects are verified such as frame, block, time, frame to decide, quorum cache, root set validators, events, root set events, validator cheater list, and atropos roots. If any inconsistency is detected, an assertion error will be raised, indicating the specific inconsistency.
 
 This method is important for testing and verifying the Lachesis protocol in scenarios where multiple validator instances are active simultaneously. It provides a means to evaluate the protocol's ability to maintain consistency and accuracy across different instances to verify that the consensus algorithm functions deterministically.
 
 ### class Lachesis
 
-The Lachesis class serves as the core entity that encapsulates the individual processing of each validator in the Lachesis consensus protocol. This involves managing and processing incoming events from the Directed Acyclic Graph (DAG), executing the protocol to assign attributes like frames and blocks to the events, and identifying special events such as roots or Atropos roots.
+The `Lachesis` class serves as the core entity that encapsulates the individual processing of each validator in the Lachesis consensus protocol. This involves managing and processing incoming events from the Directed Acyclic Graph (DAG), executing the protocol to assign attributes like frames and blocks to the events, and identifying special events such as roots or Atropos roots.
 
 The Lachesis class also plays a crucial role in handling suspected anomalies or exceptions, such as identifying and managing cheater events. It is equipped with methods that maintain the integrity of the consensus process by detecting forks and rectifying the anomalies associated with them.
 
@@ -170,7 +172,7 @@ The associated methods, to be described in detail, each perform a unique functio
 
 This is the constructor of the Lachesis class object. It initializes various properties essential for consensus tracking.
 
-- `validator` is the optional parameter which represents the associated validator for this instance of the Lachesis class. The reason it defaults to None is to accommodate two modes of running the Lachesis consensus. The "global" mode allows the Lachesis instance to process and have knowledge of all events directly. Conversely, in the "individual" mode, each validator is aware of only the events it directly observes or requests and receives. This facilitates the construction of its unique view of the DAG and subsequent results. This parameter determines the mode of operation.
+- `validator` is the optional parameter which represents the associated validator for this instance of the Lachesis class. The reason it defaults to `None` is to accommodate two modes of running the Lachesis consensus. The "global" mode allows the Lachesis instance to process and have knowledge of all events directly. Conversely, in the "individual" mode, each validator is aware of only the events it directly observes or requests and receives. This facilitates the construction of its unique view of the DAG and subsequent results. This parameter determines the mode of operation.
 
 The constructor method also initializes a number of important properties:
 
@@ -217,7 +219,7 @@ election_votes[frame_to_decide][(root.uuid, atropos_candidate.uuid)] = vote
 - `block` tracks the last frame for which an Atropos root has not yet been elected.
 - `frame_to_decide` tracks the last frame for which an Atropos root has not yet been elected as well.
 - `request_queue` is a deque containing requests from other validators to return back Events with corresponding UUIDs that they have not yet processed in the global DAG.
-- `process_queue` is dictionary of uuid:Event key-value pairs of Events that the validator is yet to process and add to its DAG and track consensus with
+- `process_queue` is a dictionary of uuid:Event key-value pairs of Events that the validator is yet to process and add to its DAG.
 - `maximum_frame` is a variable which tracks the highest frame of any validator's Events in the DAG visible to the associated validator.
 - `minimum_frame` is a variable which tracks the lowest maximum frame of any validator's Events in the DAG visible to the associated validator.
 - `leaves` tracks the leaves of the DAG - that is, those Events that are not the parents of any other event in the DAG. This is to facilitate returning the subgraph of Events unknown to another validator more efficiently by iterating towards the direct parents from the leaves to determine which Events to return.
@@ -247,15 +249,15 @@ This method ensures the correct sequence of event processing by safeguarding aga
 
 The `process_request_queue` method operates by scanning its `request_queue`, which holds tuples in the format (validator, UUIDv4). Its primary function is to deliver the portion of the DAG that is absent in the requesting validator's view.
 
+- `instances` is the dictionary of validator:instance key-value pairs of validators' corresponding Lachesis instance objects to request events from.
+
 It returns those Events from its DAG that have a timestamp less than the Event associated with the requested UUIDv4, with one exception. For Events belonging to the validator that generated the UUIDv4 in question, the timestamp could be equal to or less than the timestamp of the requested Event. In summary, this method helps ensure all validators are supplied with the necessary preceding Events, thereby maintaining an accurate representation of the DAG.
 
 The method achieves this by iterating from each of its leaf nodes in the DAG, tracked by the `leaves` property, towards its direct parents, stopping once an Event is encountered that is present in the requesting validator. All Events that match the timestamp requirement and are missing from the requesting validator are added to the requesting validator's `process_queue`. 
 
-- `instances` is the dictionary of validator:instance key-value pairs of validators' corresponding Lachesis instance objects to request events from.
-
 #### `process_deferred_events(self)`
 
-The process_deferred_events method is in charge of invoking the process_events function of the corresponding Lachesis instance. This function processes all the Events scheduled to be incorporated into the validator's DAG and evaluated for consensus. Once this operation is complete, the method clears the process_queue, ensuring all deferred Events have been duly addressed and the queue is ready for the next set of Events.
+The `process_deferred_events` method is in charge of invoking the `process_events` function of the corresponding Lachesis instance. This function processes all the Events scheduled to be incorporated into the validator's DAG and evaluated for consensus. Once this operation is complete, the method clears the process_queue, ensuring all deferred Events have been duly addressed and the queue is ready for the next set of Events.
 
 #### `quorum(self, frame)`
 
@@ -274,7 +276,6 @@ The method proceeds as follows:
 - Finally, the method calculates the total weight of active validators that are not deactivated, either as cheaters or validators, and that are not still to be activated. This total weight is then used to calculate the weight of the quorum for the current frame, which is defined as `2 * weights_total // 3 + 1`.
 
 The quorum weight for the current frame is cached and returned. This represents the minimum amount of validator weight needed to reach a consensus for the frame in question.
-
 
 #### `is_root(self, event)`
 
@@ -307,8 +308,7 @@ The method proceeds as follows:
 - If the frame of the Event does not already exist in `root_set_events`, the method also calls `quorum` to calculate the quorum for this new frame.
 - Finally, the method updates the `validator_highest_frame` dictionary to record the highest frame number the validator has reached.
 
-This method plays a pivotal role in maintaining the frame structure of the DAG and assists in identifying the roots, which are the backbone for creating a topological ordering of the Events.
-
+This method plays a pivotal role in maintaining the frame structure of the DAG and assists in identifying the roots, which are the dilineation between frames of Events.
 #### `atropos_voting(self, new_root)`
 
 The `atropos_voting` method conducts a voting process to determine the Atropos for each frame within the Directed Acyclic Graph (DAG). An Atropos is a unique root Event that represents the head of a finalized frame, or block.
@@ -336,7 +336,7 @@ Here is how the method works:
 - For each frame, it retrieves the set of root Events.
 - For each root Event, the method invokes the `atropos_voting` method. 
 
-This method ensures that all known root Events are orderly processed and voted upon to determine the Atropos of each frame. By doing so, it plays an instrumental role in structuring the DAG into a set of chronological blocks.
+This method ensures that all known root Events are orderly processed and voted upon to determine the Atropos of each frame. 
 
 #### `forkless_cause(self, event_a, event_b)`
 
@@ -395,7 +395,7 @@ Here's the breakdown of the method's operations:
 - For each parent, it first checks whether the parent's validator is not in `event.highest_observed` or if the parent's sequence number is higher than the current highest observed sequence number of the validator. It also checks whether the parent's UUID is less than the current highest observed UUID in case of a sequence number tie. If any of these conditions are met, it updates `event.highest_observed` for the parent's validator with the UUID and sequence number of the parent.
 - Next, the method iterates over each `highest_observed` entry of the parent. For each of these, it performs a similar set of checks as before to determine if the `highest_observed` attribute for the given validator needs to be updated. If necessary, it updates `event.highest_observed` for the validator with the observed information from the parent.
 
-This method ensures that the `highest_observed` attribute for each Event is accurately maintained, enabling the protocol to keep track of the most recent Event from each validator that is reachable by a given Event. 
+This method ensures that the `highest_observed` attribute for each Event is accurately maintained.
 
 #### `set_lowest_observing_events(self, event)`
 
@@ -410,7 +410,7 @@ Here's the breakdown of the method's operations:
 - If the `event`'s validator and the parent's validator are in the `validator_cheater_list`, and the current time surpasses the timestamp at which they were added to the cheater list, the method skips the current iteration and continues with the next parent.
 - Otherwise, it extends the queue with the current parent's parents, ensuring all ancestors of the `event` are covered in the process.
 
-This method ensures that the `lowest_observing` attribute for each Event's ancestors is accurately maintained, which helps in establishing the sequence of Events observed by each validator.
+This method ensures that the `lowest_observing` attribute for each Event's ancestors is accurately maintained.
 
 #### `process_events(self, events)`
 
@@ -439,7 +439,6 @@ The `graph_results` method is a helper function primarily used for graphing the 
 The graph output by this method can be very useful for understanding the performance and progression of the consensus algorithm over time. It includes all events (unless they are by suspected cheaters), their relationships with parent events, and key characteristics like frame, weight, root, and atropos status. It uses matplotlib to create and save the graph as a PDF file, with a filename passed to the method as a parameter. 
 
 In the graph, different colors are used to represent different frames, with a distinct shade used for atropos events. This provides a clear visual distinction between different stages of the algorithm. The size of the graph adjusts dynamically based on the number of nodes and levels in the DAG to ensure the best possible visual representation.
-
 
 
 ## `automate_lachesis.py`
