@@ -358,8 +358,8 @@ This mechanism, known as forkless causality, plays a key role in maintaining the
 
 Event `A` is said to be forkless-caused by Event `B` if the following conditions are met within the subgraph of `A` (the subgraph of `A` being all Events reachable by `A`):
 
-1. `Event A` does not observe any forks from the validator of `Event B`.
-2. A quorum of validators, defined as (⌈⅔W⌉ +1) where W represents the total weight of validators, has observed `Event B` without detecting any forks.
+1. Event `A` does not observe any forks from the validator of Event `B`.
+2. A quorum of validators, defined as `⌈2W/3⌉ +1` where `W` represents the total weight of validators, has observed Event `B` without detecting any forks.
 
 
 #### `detect_forks(self, event)`
