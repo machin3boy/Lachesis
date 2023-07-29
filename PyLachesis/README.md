@@ -1,29 +1,4 @@
-#### `forkless_cause(self, event_a, event_b)`
-
-The `forkless_cause` method checks if `Event A` is forkless caused by `Event B` under certain conditions in the Directed Acyclic Graph (DAG) of the Events.
-
-- `event_a` and `event_b`: The two Events for which the forkless causality relation is being evaluated.
-
-The method operates as follows:
-
-- First, it checks if the validator of `Event B` is in the cheater list for the validator of `Event A` and if the timestamp of the cheating event is less than or equal to the timestamp of `Event A`. If these conditions are met, it returns `False`, as `Event B` doesn't forkless-cause `Event A`.
-- The method then initializes a dictionary `a` that holds the highest sequence numbers observed by each validator in `Event A` and a dictionary `b` that represents the lowest observing sequence numbers of validators in `Event B`.
-- Subsequently, it iterates over the validators and their observed sequence numbers in dictionary `a`. If a validator and its observed sequence number also exist in `b` and the sequence number in `b` is less than or equal to that in `a`, it checks whether `Event A` and `Event B` form a branch without any forks (a 'forkless' branch). This is done by determining whether `Event A` and `Event B` both exist in the events visited by a validator and no forks were observed by the validator of `Event A`.
-- If `Event A` and `Event B` form a forkless branch, the weight of the validator is added to the total count (`yes`).
-- Finally, the method checks whether the count of the weights of the validators observing `Event B` in a forkless manner (i.e., without any forks) reaches a quorum for the frame of `Event B`. If it does, the function returns `True` indicating `Event B` forkless-causes `Event A`. Otherwise, it returns `False`.
-
-This mechanism, known as forkless causality, plays a key role in maintaining the integrity of the DAG and is essential in the formation of consensus in the Lachesis protocol.
-
-**Formal Definition:**
-
-Event `A` is said to be forkless caused by Event `B` if the following conditions are met within the subgraph of `A` (the subgraph of `A` being all Events reachable by `A`):
-
-1. `Event A` does not observe any forks from the validator of `Event B`.
-2. A quorum of validators, defined as (⌈⅔W⌉ +1) where W represents the total weight of validators, has observed `Event B` without detecting any forks.
-
-This method provides the core logic that allows the Lachesis protocol to ensure the forkless causality between Events and helps in maintaining the acyclicity and integrity of the Event graph.
-
-Please fix the grammar but don't adjust the wording.# PyLachesis
+# PyLachesis
 ## Directory Structure
 
 This folder holds two key Python files:
@@ -127,11 +102,59 @@ After the initial request for missing Events, the originating validator returns 
 
 This cycle of request-receive-process models the real-world communication process between validators within the Lachesis consensus protocol.
 
-#### `__init__`
-#### `parse_and_initialize`
-#### `add_validator`
-#### `process`
-#### `run_lachesis_multiinstance`
+#### `__init__(self, graph_results=False)`:
+
+This is the constructor for the `LachesisMultiInstance` class, which is used for managing multiple Lachesis instances simultaneously, each representing a unique consensus perspective of an individual validator.
+
+- `graph_results` is an optional boolean argument that determines whether a graphical representation of the protocol state will be created.
+
+When a new instance of this class is initialized, it sets up the basic structure for managing multiple Lachesis instances, each corresponding to an individual validator. The `graph_results` parameter controls whether the class will create graphical representations of the state of the protocol. The class also sets up various data structures used for managing validators, their weights, event queues, activation and deactivation times, and other details necessary for simulating the Lachesis consensus protocol.
+
+#### `parse_and_initialize(self)`:
+
+The `parse_and_initialize` method is responsible for setting up the initial state of the multi-instance simulation. It does so by reading event data from a file (the path to which is stored in `self.file_path`), parsing it, and then using that data to set up the validators and their corresponding weights. Additionally, it creates a mapping between event UUIDs and validators for convenience. For each validator, it initializes a new Lachesis instance, sets the instance's initial validators and their weights, and adds the instance to the simulation's list of instances. The method then returns a tuple containing the list of all parsed events and the UUID-validator mapping.
+
+#### `add_validator(self, event)`:
+
+- `event` is an Event object which holds the details of the validator that is being added. It includes the validator identifier and its weight.
+
+The `add_validator` method is used to add a new validator to the existing set of validators. This is done by creating a new Lachesis instance for the new validator, initializing it, and updating the various data structures that hold information about the validators, their weights, activation times, and their event queues. The new validator's details are added to the simulation's lists and dictionaries that hold validator data.
+
+#### `process(self)`
+
+The `process` function is an integral method in the `LachesisMultiInstance` class, implementing a comprehensive processing pipeline for a collection of events. This method sorts these events by their timestamps, and then processes them sequentially. It adjusts the validator set by activating and deactivating validators at appropriate frames based on the events, and manages the propagation of these events across all active validator instances.
+
+The primary steps that this function performs include:
+
+1. **Event Initialization and Sorting:** Events are first parsed and initialized into a list (`event_list`) and a map (`uuid_validator_map`). They are then sorted by their timestamps into a dictionary (`timestamp_event_dict`), ensuring chronological order of processing.
+2. **Frame Tracking:** Tracks and updates frame-related variables such as `minimum_frame`, `maximum_frame`, and `validator_highest_frame`. These frame references are critical for managing validator activation and deactivation, ensuring validators are activated or deactivated at the correct frame and time.
+3. **Event Processing per Timestamp:** The events happening at the current timestamp are processed. During processing, the method performs a range of operations:
+    - Direct parents of each event are verified and recorded.
+    - If an event is the last event from a validator, relevant deactivation details are recorded and the validator is added to the `deactivation_queue`.
+    - If the validator associated with an event has not yet been seen and the event's timestamp is within the field of view, the validator is queued for activation. The initial frame and weight for the validator are recorded in `activation_queue`.
+    - For validators that are in the activation queue, if the current minimum frame is greater than or equal to the frame at which the validator was planned to be activated, the validator is added to the `instances`.
+    - If an event is associated with a validator instance and it falls within the time scope, the event is passed to that instance for further processing via [`defer_event`](https://github.com/machin3boy/Lachesis/tree/main/PyLachesis#defer_eventself-event-instances-uuid_validator_map).
+4. **Request Queue Processing:** [Processes any queued requests](https://github.com/machin3boy/Lachesis/tree/main/PyLachesis#process_request_queueself-instances) in all the validator instances.
+5. **Deferred Event Processing**: [Processes any deferred events](https://github.com/machin3boy/Lachesis/tree/main/PyLachesis#process_deferred_eventsself) in all the validator instances.
+
+This method ensures that events are processed in a chronological order and are propagated correctly across the various validator instances. Moreover, the method accurately manages validator activations and deactivations based on the events and their timestamps, thereby maintaining an up-to-date and accurate picture of the network's state. 
+
+#### `run_lachesis_multiinstance(self, input_filename, output_folder, graph_results=False)`
+
+The `run_lachesis_multiinstance` method functions as a main driver to execute the Lachesis protocol in a multi-instance scenario. This method processes a collection of events for each validator instance, based on data from an input file. Optionally, it can generate individual graph results for each validator instance. The method also verifies the consistency of each instance with a reference instance, ensuring the accuracy of the protocol's execution.
+
+- `input_filename`: This is the name of the input file that contains the event data to be processed. The data in this file is parsed into a list of events, with each event containing details about the validator, timestamp, sequence, etc.
+- `output_folder`: This is the folder where individual graphical representations of the final state of each validator instance will be saved, provided that `graph_results` is set to True.
+- `graph_results`: This is a Boolean parameter that determines whether or not to generate graphical representations of the final state for each validator instance. If set to True, a graph will be generated and saved for each validator instance in the `output_folder`.
+
+The steps followed by this function are as follows:
+
+1. **Setup**: The method sets up input file path and the `graph_results` flag. The `process` method of `LachesisMultiInstance` is called to process the events for each validator instance.
+2. **Reference Instance Creation**: A reference instance is created by running the Lachesis protocol using the `run_lachesis` method on the input file. This serves as a reference for verifying the multi-instance run.
+3. **Graph Result Generation**: If `graph_results` is set to True, the method iterates over each validator instance and generates a graph of the final state of the protocol. These graphs are saved as PDF files in the `output_folder`, with individual files for each validator instance.
+4. **Verification**: The method then verifies the accuracy and consistency of each validator instance in relation to the reference instance. Several aspects are verified such as frame, block, time, frame to decide, quorum cache, root set validators, events, root set events, validator cheater list, and atropos roots. If any inconsistency is detected, an assertion error will be raised, indicating the specific inconsistency.
+
+This method is important for testing and verifying the Lachesis protocol in scenarios where multiple validator instances are active simultaneously. It provides a means to evaluate the protocol's ability to maintain consistency and accuracy across different instances to verify that the consensus algorithm functions deterministically.
 
 ### class Lachesis
 
@@ -364,7 +387,7 @@ In the context of the Lachesis protocol, a fork refers to a pair of events produ
 
 The `set_highest_events_observed` method updates the `highest_observed` attribute for a given Event. The `highest_observed` attribute represents the most recent Event created by each validator that is reachable by the given Event.
 
-- `event`: This is the Event for which the `highest_observed` attribute is being updated.
+- `event` is the Event for which the `highest_observed` attribute is being updated.
 
 Here's the breakdown of the method's operations:
 
@@ -411,33 +434,11 @@ The key operations that this function performs include:
 
 The `graph_results` method is a helper function primarily used for graphing the results of the consensus algorithm. It provides a visual representation of the constructed Directed Acyclic Graph (DAG) showing the events processed, their relationships, their validators, and any additional attributes such as roots or atropos. The method color codes each node in the graph based on specific attributes, and generates a comprehensive visualization that helps in understanding the flow and structure of the DAG. 
 
-- `output_filename` is the file name passed to the method to indicating where to save the visual representation of the results.
+- `output_filename` is the file name passed to the method to indicate where to save the visual representation of the results.
 
 The graph output by this method can be very useful for understanding the performance and progression of the consensus algorithm over time. It includes all events (unless they are by suspected cheaters), their relationships with parent events, and key characteristics like frame, weight, root, and atropos status. It uses matplotlib to create and save the graph as a PDF file, with a filename passed to the method as a parameter. 
 
 In the graph, different colors are used to represent different frames, with a distinct shade used for atropos events. This provides a clear visual distinction between different stages of the algorithm. The size of the graph adjusts dynamically based on the number of nodes and levels in the DAG to ensure the best possible visual representation.
-
-#### `run_lachesis(self, input_filename, output_filename, graph_results=False)`
-
-
-
-The `run_lachesis` method is the main function that puts together all the components of the Lachesis protocol for execution. It follows a series of steps to process the list of events, based on data from an input file, and optionally generates a graph of the results. 
-
-- `input_filename`: This is the name of the input file that contains the event data to be processed. The data in this file is parsed into a list of events, with each event detailing information about a validator, timestamp, sequence, etc.
-- `output_filename`: If the `graph_results` parameter is set to True, this is the name of the output file where the graphical representation of the final state of the protocol will be saved. The file will be saved in PDF format.
-- `graph_results`: This is a Boolean parameter that determines whether or not to generate a graphical representation of the final state of the protocol. If set to True, a graph will be generated and saved to the output file specified by `output_filename`.
-
-The execution starts with parsing the data from the input file passed to the method. This data includes a list of events to be processed, and each event contains details about the validator, timestamp, sequence, etc.
-
-Next, the list of events is processed to extract and separate the validators and their respective weights. This is done by calling the `filter_validators_and_weights` helper function.
-
-With the validators and weights at hand, the `initialize_validators` method is then called to set up the initial state of the protocol. This includes initializing various parameters and data structures needed for the execution of the protocol.
-
-After initialization, the events are processed using the `process_events` method. This method handles the core logic of the Lachesis protocol including the processing of each event, detection of forks, setting of highest observed events, setting of lowest observing events, setting roots and managing the DAG's leaves.
-
-If the `graph_results` parameter is set to True, the `graph_results` method is then called to generate a graphical representation of the final state of the protocol, and this graph is saved as a PDF file with the name given by `output_filename`. 
-
-In summary, `run_lachesis` is the main driver of the Lachesis protocol's execution, performing initialization, processing of events, and potentially creating a graphical representation of the results.
 
 
 
