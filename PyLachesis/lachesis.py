@@ -939,9 +939,6 @@ class Lachesis:
                 self.uuid_event_dict[event.uuid] = event
                 self.process_known_roots()
 
-        # print(self.leaves)
-        # print(len(self.leaves))
-
     def graph_results(self, output_filename):
         colors = ["orange", "yellow", "cyan", "blue", "purple"]
         green = mcolors.to_rgb("green")

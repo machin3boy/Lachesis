@@ -1,5 +1,29 @@
-The process_deferred_events method is in charge of invoking the process_events function of the corresponding Lachesis instance. This function processes all the Events scheduled to be incorporated into the validator's DAG and evaluated for consensus. Once this operation is complete, the method clears the process_queue, ensuring all deferred Events have been duly addressed and the queue is ready for the next set of Events.# PyLachesis
+#### `forkless_cause(self, event_a, event_b)`
 
+The `forkless_cause` method checks if `Event A` is forkless caused by `Event B` under certain conditions in the Directed Acyclic Graph (DAG) of the Events.
+
+- `event_a` and `event_b`: The two Events for which the forkless causality relation is being evaluated.
+
+The method operates as follows:
+
+- First, it checks if the validator of `Event B` is in the cheater list for the validator of `Event A` and if the timestamp of the cheating event is less than or equal to the timestamp of `Event A`. If these conditions are met, it returns `False`, as `Event B` doesn't forkless-cause `Event A`.
+- The method then initializes a dictionary `a` that holds the highest sequence numbers observed by each validator in `Event A` and a dictionary `b` that represents the lowest observing sequence numbers of validators in `Event B`.
+- Subsequently, it iterates over the validators and their observed sequence numbers in dictionary `a`. If a validator and its observed sequence number also exist in `b` and the sequence number in `b` is less than or equal to that in `a`, it checks whether `Event A` and `Event B` form a branch without any forks (a 'forkless' branch). This is done by determining whether `Event A` and `Event B` both exist in the events visited by a validator and no forks were observed by the validator of `Event A`.
+- If `Event A` and `Event B` form a forkless branch, the weight of the validator is added to the total count (`yes`).
+- Finally, the method checks whether the count of the weights of the validators observing `Event B` in a forkless manner (i.e., without any forks) reaches a quorum for the frame of `Event B`. If it does, the function returns `True` indicating `Event B` forkless-causes `Event A`. Otherwise, it returns `False`.
+
+This mechanism, known as forkless causality, plays a key role in maintaining the integrity of the DAG and is essential in the formation of consensus in the Lachesis protocol.
+
+**Formal Definition:**
+
+Event `A` is said to be forkless caused by Event `B` if the following conditions are met within the subgraph of `A` (the subgraph of `A` being all Events reachable by `A`):
+
+1. `Event A` does not observe any forks from the validator of `Event B`.
+2. A quorum of validators, defined as (⌈⅔W⌉ +1) where W represents the total weight of validators, has observed `Event B` without detecting any forks.
+
+This method provides the core logic that allows the Lachesis protocol to ensure the forkless causality between Events and helps in maintaining the acyclicity and integrity of the Event graph.
+
+Please fix the grammar but don't adjust the wording.# PyLachesis
 ## Directory Structure
 
 This folder holds two key Python files:
@@ -214,21 +238,20 @@ The process_deferred_events method is in charge of invoking the process_events f
 
 The quorum method calculates the weight of the quorum for a given frame in the DAG. It primarily takes into account the set of active validators and their respective weights, while also considering any changes in validator activity or suspected misbehavior.
 
+- `frame` is the frame for which the quorum is calculated and stored in the cache, or returned if it is already available in the cache.
+
 The method uses a cache, `quorum_cache`, to store the calculated quorum weights for different frames to avoid unnecessary computations.
 
-Initially, it makes copies of the sets of deactivated cheaters and validators. It then iterates over the `deactivation_queue`, a dictionary that keeps track of validators that are to be deactivated and the frame at which they should be deactivated. Validators that have reached or surpassed their deactivation frame are added to the `deactivated_validators` set.
+The method proceeds as follows:
 
-An `active_validators` list is constructed, which includes validators who are not in either the `deactivated_cheaters` or `deactivated_validators` sets.
-
-Next, the method handles suspected cheaters. It iterates over the `suspected_cheaters` set, checking if a suspected cheater is not already deactivated. If not, it checks whether this suspected cheater has been observed by the majority of the active validators before `frame - 1` - this is akin to a buffer zone to ensure all validators have had the chance to observe the cheater in question. If this cheater has been observed by the majority of active validators, it is added to the `deactivated_cheaters` set.
-
-The method then processes the `activation_queue`, a dictionary with validators that are to be activated and their respective weights. If a validator's activation frame is equal to or earlier than the current frame and they're not already an active validator, they are added to the validators list and their weight is set.
-
-Finally, the method calculates the total weight of active validators that are not deactivated, either as cheaters or validators, and that are not still to be activated. This total weight is then used to calculate the weight of the quorum for the current frame, which is defined as `2 * weights_total // 3 + 1`.
+- Initially, it makes copies of the sets of deactivated cheaters and validators. It then iterates over the `deactivation_queue`, a dictionary that keeps track of validators that are to be deactivated and the frame at which they should be deactivated. Validators that have reached or surpassed their deactivation frame are added to the `deactivated_validators` set.
+- An `active_validators` list is constructed, which includes validators who are not in either the `deactivated_cheaters` or `deactivated_validators` sets.
+- Next, the method handles suspected cheaters. It iterates over the `suspected_cheaters` set, checking if a suspected cheater is not already deactivated. If not, it checks whether this suspected cheater has been observed by the majority of the active validators before `frame - 1` - this is akin to a buffer zone to ensure all validators have had the chance to observe the cheater in question. If this cheater has been observed by the majority of active validators, it is added to the `deactivated_cheaters` set.
+- The method then processes the `activation_queue`, a dictionary with validators that are to be activated and their respective weights. If a validator's activation frame is equal to or earlier than the current frame and they're not already an active validator, they are added to the validators list and their weight is set.
+- Finally, the method calculates the total weight of active validators that are not deactivated, either as cheaters or validators, and that are not still to be activated. This total weight is then used to calculate the weight of the quorum for the current frame, which is defined as `2 * weights_total // 3 + 1`.
 
 The quorum weight for the current frame is cached and returned. This represents the minimum amount of validator weight needed to reach a consensus for the frame in question.
 
-- `frame` is the frame for which the quorum is calculated and stored in the cache, or returned if it is already available in the cache.
 
 #### `is_root(self, event)`
 
@@ -263,21 +286,160 @@ The method proceeds as follows:
 
 This method plays a pivotal role in maintaining the frame structure of the DAG and assists in identifying the roots, which are the backbone for creating a topological ordering of the Events.
 
-#### `atropos_voting`
-#### `process_known_roots`
-#### `forkless_cause`
+#### `atropos_voting(self, new_root)`
 
-Event `A` is forkless caused by Event `B` if in the subgraph of `A` (the subgraph of `A` being all Events reachable by `A`):
+The `atropos_voting` method conducts a voting process to determine the Atropos for each frame within the Directed Acyclic Graph (DAG). An Atropos is a unique root Event that represents the head of a finalized frame, or block.
 
-- `A` does not observe any forks from `B`'s validator
-- The quorum of validators (⌈⅔W⌉ +1) has observed B (after excluding branches with a fork)
+- `new_root`: This is the root Event for which the voting process is being conducted.
 
-#### `detect_forks`
-#### `set_highest_events_observed`
-#### `set_lowest_observing_events`
-#### `process_events`
-#### `graph_results`
-#### `run_lachesis`
+Here's the breakdown of the method's operations:
+
+- It begins by fetching all root candidates eligible for becoming the Atropos of the frame under consideration (`frame_to_decide`).
+- The method then loops through each candidate. If a candidate's UUID is already in `decided_roots`, it is skipped since its status has already been determined.
+- For each candidate root, the method prepares a vote. The structure of the vote depends on the frame number of the `new_root` relative to the frame to decide.
+  - If `new_root`'s frame directly succeeds the frame to decide, then this is the first round and the vote is simply whether `new_root` is forkless-caused by the candidate.
+  - If `new_root`'s frame surpasses the frame to decide by more than one, then this is the second round or more, and the vote takes into account the voting of previous roots in the frame before `new_root`'s frame. The method tallies up the weight of the 'yes' and 'no' votes from the previous roots. The vote is then determined by whether the 'yes' or 'no' votes surpass the quorum for the frame.
+- The voting result is then stored in the `election_votes` data structure. If the vote is 'decided' (i.e., either 'yes' or 'no' votes reach a quorum), the result is also stored in the `decided_roots` dictionary.
+
+This method plays a key role in determining the Atropos for each frame, which is a critical step in dividing the Events into chronologically ordered blocks and finalizing frames.
+
+#### `process_known_roots(self)`
+
+The `process_known_roots` method is responsible for the orderly processing of known root Events to determine the Atropos for each successive frame to decide in the DAG.
+
+Here is how the method works:
+
+- The method iterates over each frame starting from the frame following the last decided frame (`frame_to_decide`) up to the current frame in the DAG (`self.frame`).
+- For each frame, it retrieves the set of root Events.
+- For each root Event, the method invokes the `atropos_voting` method. 
+
+This method ensures that all known root Events are orderly processed and voted upon to determine the Atropos of each frame. By doing so, it plays an instrumental role in structuring the DAG into a set of chronological blocks.
+
+#### `forkless_cause(self, event_a, event_b)`
+
+The `forkless_cause` method checks if `Event A` is forkless caused by `Event B` under certain conditions in the Directed Acyclic Graph (DAG) of the Events.
+
+- `event_a` and `event_b`: The two Events for which the forkless causality relation is being evaluated.
+
+The method operates as follows:
+
+- First, it checks if the validator of `Event B` is in the cheater list for the validator of `Event A` and if the timestamp of the first cheating event is less than or equal to the timestamp of `Event A` - the latter condition is important for deterministic computation between validators retrieiving events at different times, as this method assumes that `A`'s validator only has knowledge of `B`'s Events up to its timestamp. If these conditions are met, it returns `False`, as `Event B` doesn't forkless-cause `Event A`.
+- The method then initializes a dictionary `a` that holds the highest sequence numbers observed by each validator in `Event A` and a dictionary `b` that represents the lowest observing sequence numbers of validators in `Event B`.
+- Subsequently, it iterates over the validators and their observed sequence numbers in dictionary `a`. If a validator and its observed sequence number also exist in `b` and the sequence number in `b` is less than or equal to that in `a`, it checks whether `Event A` and `Event B` form a branch without any forks (a 'forkless' branch). This is done by determining whether `Event A` and `Event B` both exist in the events visited by a validator and no forks were observed by the validator of `Event A`.
+- If `Event A` and `Event B` form a forkless branch, the weight of the validator is added to the total count (`yes`).
+- Finally, the method checks whether the count of the weights of the validators observing `Event B` in a forkless manner (i.e., without any forks) reaches a quorum for the frame of `Event B`. If it does, the function returns `True` indicating `Event B` forkless-causes `Event A` or that `Event A` is forkless-caused by `Evebt B`. Otherwise, it returns `False`.
+
+This mechanism, known as forkless causality, plays a key role in maintaining the integrity of the DAG and is essential in the formation of consensus in the Lachesis protocol. This method provides the core logic that allows the Lachesis protocol to ensure the forkless causality between Events and helps in maintaining the acyclicity and integrity of the Event graph.
+
+**Formal Definition:**
+
+Event `A` is said to be forkless-caused by Event `B` if the following conditions are met within the subgraph of `A` (the subgraph of `A` being all Events reachable by `A`):
+
+1. `Event A` does not observe any forks from the validator of `Event B`.
+2. A quorum of validators, defined as (⌈⅔W⌉ +1) where W represents the total weight of validators, has observed `Event B` without detecting any forks.
+
+
+#### `detect_forks(self, event)`
+
+The `detect_forks` method identifies if a fork has occurred within the Directed Acyclic Graph (DAG) of the Events, and keeps a record of validators who have created a fork. A fork is a situation where a validator creates two or more events with the same sequence and epoch number. This implementation has not yet implemented epochs and as a consequence of ever-increasing sequences, only sequences are examined.
+
+- `event` is the Event which scans its parents for forks by examining and updating its `visited` dictionary and other data structures. 
+
+The method performs the following steps:
+
+- It first checks if the validator of the Event is already listed in the cheater list or in the frames of cheaters as a key, and if not, it initializes these entries for the validator.
+- The method then creates a deque of the parent Events of the current Event and enters a loop, which continues until all parent Events have been processed.
+- In each iteration of the loop, the method pops a parent Event from the deque and processes it. If the validator of the Event has not visited the parent Event yet, the method marks the parent Event as visited and adds it to the set of Events visited by the validator.
+- The method then checks if the sequence number of the parent Event has been observed by the validator before. If it has, this indicates a fork, and the method updates the cheater list, the frames of cheaters, the timestamp of cheaters, and the suspected cheaters set accordingly.
+- If the sequence number of the parent event has not been observed by the validator before, the method adds the sequence number to the observed sequences of the validator.
+- Finally, the method extends the deque of parent events with the parents of the current parent event, allowing the process to continue for all ancestors of the initial event.
+
+This function allows the Lachesis protocol to detect forks and manage cheaters effectively, ensuring the integrity and reliability of the network.
+
+**Fork and Cheater Definition:**
+
+In the context of the Lachesis protocol, a fork refers to a pair of events produced by the same validator with the same sequence and epoch number. The validator which creates a fork is called a cheater. Events from forks are excluded from root finding, thereby maintaining the integrity of the frames and the validity of the consensus process.
+
+#### `set_highest_events_observed(self, event)`
+
+The `set_highest_events_observed` method updates the `highest_observed` attribute for a given Event. The `highest_observed` attribute represents the most recent Event created by each validator that is reachable by the given Event.
+
+- `event`: This is the Event for which the `highest_observed` attribute is being updated.
+
+Here's the breakdown of the method's operations:
+
+- The method starts by iterating over each parent of the `event`.
+- For each parent, it first checks whether the parent's validator is not in `event.highest_observed` or if the parent's sequence number is higher than the current highest observed sequence number of the validator. It also checks whether the parent's UUID is less than the current highest observed UUID in case of a sequence number tie. If any of these conditions are met, it updates `event.highest_observed` for the parent's validator with the UUID and sequence number of the parent.
+- Next, the method iterates over each `highest_observed` entry of the parent. For each of these, it performs a similar set of checks as before to determine if the `highest_observed` attribute for the given validator needs to be updated. If necessary, it updates `event.highest_observed` for the validator with the observed information from the parent.
+
+This method ensures that the `highest_observed` attribute for each Event is accurately maintained, enabling the protocol to keep track of the most recent Event from each validator that is reachable by a given Event. 
+
+#### `set_lowest_observing_events(self, event)`
+
+The `set_lowest_observing_events` method updates the `lowest_observing` attribute for a given Event's ancestors in the Directed Acyclic Graph (DAG). The `lowest_observing` attribute represents the earliest Event created by each validator that observes a given Event.
+
+- `event` refers to the Event from which observations are drawn to update the `lowest_observing` attribute of its ancestor Events in the Directed Acyclic Graph (DAG).
+
+Here's the breakdown of the method's operations:
+
+- The method begins by setting up a queue with the parents of the `event`.
+- It then enters a loop, popping parents from the queue one by one. For each parent, it checks if the `event`'s validator is not in the parent's `lowest_observing` list, or if the `event`'s sequence number is less than the currently lowest observed sequence number for the validator. It also checks whether the `event`'s UUID is less than the current lowest observed UUID in case of a sequence number tie. If any of these conditions are met, it updates `parent.lowest_observing` for the `event`'s validator with the UUID and sequence number of the `event`.
+- If the `event`'s validator and the parent's validator are in the `validator_cheater_list`, and the current time surpasses the timestamp at which they were added to the cheater list, the method skips the current iteration and continues with the next parent.
+- Otherwise, it extends the queue with the current parent's parents, ensuring all ancestors of the `event` are covered in the process.
+
+This method ensures that the `lowest_observing` attribute for each Event's ancestors is accurately maintained, which helps in establishing the sequence of Events observed by each validator.
+
+#### `process_events(self, events)`
+
+The `process_events` function is a comprehensive method that processes a list of incoming Events. This method sorts these events by their timestamps and sequentially incorporates them into the Directed Acyclic Graph (DAG).
+
+- `events` is the list of Events to incorporate into the DAG of the validator and to evaluate consensus mechanisms for.
+
+The key operations that this function performs include:
+
+1. **Timestamp Sorting:** Events are sorted by their timestamps, ensuring chronological order of processing.
+2. **Frame Management:** Manages frame-related variables including `minimum_frame`, `maximum_frame`, and `validator_highest_frame`. These frame references are critical for managing validator activation and deactivation, ensuring validators are activated or deactivated at the appropriate frame and time (deterministically).
+3. **Event Sorting and Processing:** The events happening at the current timestamp are sorted and processed. During processing:
+    - Direct parents of each event are identified and recorded.
+    - Leaf events are updated (events that have no child events yet).
+    - If an event is the last event from its validator, relevant deactivation details are recorded.
+    - The validator of the event is verified. If the validator is new and within the field of view, they are added to the validator list and their weight is recorded. If it's beyond the field of view, the validator is queued for activation.
+4. **Fork Detection, Observation Updates, and Root Setting:** Forks in the event's history are detected, the highest observed events and lowest observing events for each event are updated, and roots of the DAG are also updated with the new event.
+5. **Event Incorporation:** The event is added to the `events` list, its UUID to the `uuid_event_dict` dictionary for easy retrieval, and any known roots are processed.
+
+#### `graph_results(self, output_filename)`
+
+The `graph_results` method is a helper function primarily used for graphing the results of the consensus algorithm. It provides a visual representation of the constructed Directed Acyclic Graph (DAG) showing the events processed, their relationships, their validators, and any additional attributes such as roots or atropos. The method color codes each node in the graph based on specific attributes, and generates a comprehensive visualization that helps in understanding the flow and structure of the DAG. 
+
+- `output_filename` is the file name passed to the method to indicating where to save the visual representation of the results.
+
+The graph output by this method can be very useful for understanding the performance and progression of the consensus algorithm over time. It includes all events (unless they are by suspected cheaters), their relationships with parent events, and key characteristics like frame, weight, root, and atropos status. It uses matplotlib to create and save the graph as a PDF file, with a filename passed to the method as a parameter. 
+
+In the graph, different colors are used to represent different frames, with a distinct shade used for atropos events. This provides a clear visual distinction between different stages of the algorithm. The size of the graph adjusts dynamically based on the number of nodes and levels in the DAG to ensure the best possible visual representation.
+
+#### `run_lachesis(self, input_filename, output_filename, graph_results=False)`
+
+
+
+The `run_lachesis` method is the main function that puts together all the components of the Lachesis protocol for execution. It follows a series of steps to process the list of events, based on data from an input file, and optionally generates a graph of the results. 
+
+- `input_filename`: This is the name of the input file that contains the event data to be processed. The data in this file is parsed into a list of events, with each event detailing information about a validator, timestamp, sequence, etc.
+- `output_filename`: If the `graph_results` parameter is set to True, this is the name of the output file where the graphical representation of the final state of the protocol will be saved. The file will be saved in PDF format.
+- `graph_results`: This is a Boolean parameter that determines whether or not to generate a graphical representation of the final state of the protocol. If set to True, a graph will be generated and saved to the output file specified by `output_filename`.
+
+The execution starts with parsing the data from the input file passed to the method. This data includes a list of events to be processed, and each event contains details about the validator, timestamp, sequence, etc.
+
+Next, the list of events is processed to extract and separate the validators and their respective weights. This is done by calling the `filter_validators_and_weights` helper function.
+
+With the validators and weights at hand, the `initialize_validators` method is then called to set up the initial state of the protocol. This includes initializing various parameters and data structures needed for the execution of the protocol.
+
+After initialization, the events are processed using the `process_events` method. This method handles the core logic of the Lachesis protocol including the processing of each event, detection of forks, setting of highest observed events, setting of lowest observing events, setting roots and managing the DAG's leaves.
+
+If the `graph_results` parameter is set to True, the `graph_results` method is then called to generate a graphical representation of the final state of the protocol, and this graph is saved as a PDF file with the name given by `output_filename`. 
+
+In summary, `run_lachesis` is the main driver of the Lachesis protocol's execution, performing initialization, processing of events, and potentially creating a graphical representation of the results.
+
+
 
 ## `automate_lachesis.py`
 
